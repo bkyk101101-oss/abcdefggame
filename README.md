@@ -1,179 +1,104 @@
-# abcdefggame
-<!DOCTYPE html>
-<html>
+# 피카츄기르기
+<html lang="ko">
 <head>
-    <title>Simple Tetris</title>
+    <meta charset="UTF-8">
+    <title>피카츄 다마고치</title>
     <style>
-        body { background: #202028; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #tetris { border: solid 2px #fff; background-color: #000; height: 400px; }
-        .score { font-size: 2em; margin-bottom: 10px; }
+        body { background-color: #FFDE00; text-align: center; font-family: 'Arial', sans-serif; }
+        #game-box { 
+            width: 350px; background: white; margin: 50px auto; 
+            padding: 20px; border-radius: 50px; border: 8px solid #3B4CCA;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        #pikachu { font-size: 80px; height: 120px; transition: 0.3s; margin: 20px 0; }
+        .stat-bar { text-align: left; margin: 10px 0; font-weight: bold; }
+        .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button { 
+            padding: 10px; border-radius: 20px; border: none; 
+            background: #CC0000; color: white; font-weight: bold; cursor: pointer;
+        }
+        button:hover { background: #3B4CCA; }
+        #log { margin-top: 15px; font-size: 14px; color: #555; height: 20px; }
+        /* 몬스터볼 효과 */
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-3px, 0px) rotate(-10deg); }
+            40% { transform: translate(3px, 2px) rotate(10deg); }
+            100% { transform: translate(1px, -1px) rotate(0deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="score" id="score">0</div>
-    <canvas id="tetris" width="240" height="400"></canvas>
 
-    <script>
-        const canvas = document.getElementById('tetris');
-        const context = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
+<div id="game-box">
+    <h2 style="color: #3B4CCA;">Pika-Pika! ⚡️</h2>
+    <div class="stat-bar">🍎 배고픔: <span id="hunger">100</span></div>
+    <div class="stat-bar">💖 행복도: <span id="happiness">100</span></div>
+    <div class="stat-bar">💢 순종도: <span id="obedience">20</span></div>
 
-        context.scale(20, 20);
+    <div id="pikachu">⚡(o'ω'o)⚡</div>
+    <div id="log">피카츄가 당신을 쳐다봅니다.</div>
 
-        // 라인 삭제 로직
-        function arenaSweep() {
-            let rowCount = 1;
-            outer: for (let y = arena.length - 1; y > 0; --y) {
-                for (let x = 0; x < arena[y].length; ++x) {
-                    if (arena[y][x] === 0) continue outer;
-                }
-                const row = arena.splice(y, 1)[0].fill(0);
-                arena.unshift(row);
-                ++y;
-                player.score += rowCount * 10;
-                rowCount *= 2;
-            }
+    <div class="buttons">
+        <button onclick="action('feed')">🍎 맛있는 열매</button>
+        <button onclick="action('play')">🎡 같이 놀기</button>
+        <button onclick="action('sleep')">💤 낮잠 자기</button>
+        <button style="background: black;" onclick="action('punish')">🔴 몬스터볼로 혼내기</button>
+    </div>
+</div>
+
+<script>
+    let hunger = 100, happiness = 100, obedience = 20;
+    const pika = document.getElementById('pikachu');
+    const log = document.getElementById('log');
+
+    function update() {
+        document.getElementById('hunger').innerText = hunger;
+        document.getElementById('happiness').innerText = happiness;
+        document.getElementById('obedience').innerText = obedience;
+
+        if (obedience < 30) pika.innerText = "⚡( `皿´ )⚡"; // 반항적
+        else if (happiness < 30) pika.innerText = "⚡( ; ω ; )⚡"; // 슬픔
+        else pika.innerText = "⚡(o'ω'o)⚡"; // 평온
+    }
+
+    function action(type) {
+        pika.classList.remove('shake');
+        void pika.offsetWidth; // 애니메이션 리셋용
+
+        if (type === 'feed') {
+            hunger = Math.min(hunger + 20, 100);
+            log.innerText = "피카츄가 자뭉열매를 먹었습니다!";
+        } else if (type === 'play') {
+            happiness = Math.min(happiness + 20, 100);
+            hunger -= 10;
+            log.innerText = "피카츄와 즐겁게 놀았습니다!";
+        } else if (type === 'sleep') {
+            happiness += 5;
+            log.innerText = "피카츄가 푹 자고 일어났습니다.";
+        } else if (type === 'punish') {
+            pika.classList.add('shake');
+            obedience = Math.min(obedience + 30, 100);
+            happiness = Math.max(happiness - 40, 0);
+            pika.innerText = "🔴"; // 몬스터볼에 갇힘!
+            log.innerText = "몬스터볼을 던져 따끔하게 혼냈습니다!";
+            setTimeout(update, 1000); 
+            return;
         }
-
-        // 충돌 감지
-        function collide(arena, player) {
-            const [m, o] = [player.matrix, player.pos];
-            for (let y = 0; y < m.length; ++y) {
-                for (let x = 0; x < m[y].length; ++x) {
-                    if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
-                }
-            }
-            return false;
-        }
-
-        // 보드 생성
-        function createMatrix(w, h) {
-            const matrix = [];
-            while (h--) matrix.push(new Array(w).fill(0));
-            return matrix;
-        }
-
-        // 블록 모양 정의
-        function createPiece(type) {
-            if (type === 'I') return [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]];
-            else if (type === 'L') return [[0, 2, 0], [0, 2, 0], [0, 2, 2]];
-            else if (type === 'J') return [[0, 3, 0], [0, 3, 0], [3, 3, 0]];
-            else if (type === 'O') return [[4, 4], [4, 4]];
-            else if (type === 'Z') return [[5, 5, 0], [0, 5, 5], [0, 0, 0]];
-            else if (type === 'S') return [[0, 6, 6], [6, 6, 0], [0, 0, 0]];
-            else if (type === 'T') return [[0, 7, 0], [7, 7, 7], [0, 0, 0]];
-        }
-
-        function draw() {
-            context.fillStyle = '#000';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            drawMatrix(arena, {x: 0, y: 0});
-            drawMatrix(player.matrix, player.pos);
-        }
-
-        function drawMatrix(matrix, offset) {
-            const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
-            matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
-                    if (value !== 0) {
-                        context.fillStyle = colors[value];
-                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                    }
-                });
-            });
-        }
-
-        function merge(arena, player) {
-            player.matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
-                    if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
-                });
-            });
-        }
-
-        function rotate(matrix, dir) {
-            for (let y = 0; y < matrix.length; ++y) {
-                for (let x = 0; x < y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
-            }
-            if (dir > 0) matrix.forEach(row => row.reverse());
-            else matrix.reverse();
-        }
-
-        function playerDrop() {
-            player.pos.y++;
-            if (collide(arena, player)) {
-                player.pos.y--;
-                merge(arena, player);
-                playerReset();
-                arenaSweep();
-                updateScore();
-            }
-            dropCounter = 0;
-        }
-
-        function playerMove(offset) {
-            player.pos.x += offset;
-            if (collide(arena, player)) player.pos.x -= offset;
-        }
-
-        function playerReset() {
-            const pieces = 'TJLOSZI';
-            player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
-            player.pos.y = 0;
-            player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-            if (collide(arena, player)) {
-                arena.forEach(row => row.fill(0));
-                player.score = 0;
-                updateScore();
-            }
-        }
-
-        function playerRotate(dir) {
-            const pos = player.pos.x;
-            let offset = 1;
-            rotate(player.matrix, dir);
-            while (collide(arena, player)) {
-                player.pos.x += offset;
-                offset = -(offset + (offset > 0 ? 1 : -1));
-                if (offset > player.matrix[0].length) {
-                    rotate(player.matrix, -dir);
-                    player.pos.x = pos;
-                    return;
-                }
-            }
-        }
-
-        let dropCounter = 0;
-        let dropInterval = 1000;
-        let lastTime = 0;
-
-        function update(time = 0) {
-            const deltaTime = time - lastTime;
-            dropCounter += deltaTime;
-            if (dropCounter > dropInterval) playerDrop();
-            lastTime = time;
-            draw();
-            requestAnimationFrame(update);
-        }
-
-        function updateScore() {
-            scoreElement.innerText = player.score;
-        }
-
-        document.addEventListener('keydown', event => {
-            if (event.keyCode === 37) playerMove(-1); // 왼쪽 화살표
-            else if (event.keyCode === 39) playerMove(1); // 오른쪽 화살표
-            else if (event.keyCode === 40) playerDrop(); // 아래쪽 화살표
-            else if (event.keyCode === 81) playerRotate(-1); // Q (회전)
-            else if (event.keyCode === 87) playerRotate(1); // W (회전)
-        });
-
-        const arena = createMatrix(12, 20);
-        const player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
-
-        playerReset();
-        updateScore();
         update();
-    </script>
+    }
+
+    // 시간이 흐르면 수치 감소
+    setInterval(() => {
+        hunger = Math.max(hunger - 2, 0);
+        happiness = Math.max(happiness - 1, 0);
+        update();
+        if(hunger <= 0 && happiness <= 0) {
+            alert("피카츄가 가출했습니다!");
+            location.reload();
+        }
+    }, 4000);
+</script>
 </body>
 </html>
