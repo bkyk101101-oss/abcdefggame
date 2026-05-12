@@ -1,0 +1,84 @@
+<!doctype html>
+
+  <script>
+    const rates = [{"origin": "Zone 1", "destination": "Zone 1", "truckType": "LTL", "buyingMinimum": 100000, "buyingRateKg": 1000.0, "sellingMinimum": 150000, "sellingRateKg": 1200.0}, {"origin": "Zone 1", "destination": "Zone 2", "truckType": "LTL", "buyingMinimum": 200000, "buyingRateKg": 2000.0, "sellingMinimum": 250000, "sellingRateKg": 1201.0}, {"origin": "Zone 1", "destination": "Zone 3", "truckType": "LTL", "buyingMinimum": 300000, "buyingRateKg": 3000.0, "sellingMinimum": 350000, "sellingRateKg": 1202.0}, {"origin": "Zone 1", "destination": "Zone 4", "truckType": "LTL", "buyingMinimum": 400000, "buyingRateKg": 4000.0, "sellingMinimum": 450000, "sellingRateKg": 1203.0}, {"origin": "Zone 2", "destination": "Zone 1", "truckType": "LTL", "buyingMinimum": 500000, "buyingRateKg": 5000.0, "sellingMinimum": 550000, "sellingRateKg": 1204.0}, {"origin": "Zone 4", "destination": "Zone 1", "truckType": "LTL", "buyingMinimum": 600000, "buyingRateKg": 6000.0, "sellingMinimum": 650000, "sellingRateKg": 1205.0}, {"origin": "Zone 1", "destination": "Zone 1", "truckType": "FTL", "buyingMinimum": 700000, "buyingRateKg": 7000.0, "sellingMinimum": 750000, "sellingRateKg": 1206.0}, {"origin": "Zone 1", "destination": "Zone 2", "truckType": "FTL", "buyingMinimum": 800000, "buyingRateKg": 8000.0, "sellingMinimum": 850000, "sellingRateKg": 1207.0}, {"origin": "Zone 1", "destination": "Zone 3", "truckType": "FTL", "buyingMinimum": 900000, "buyingRateKg": 9000.0, "sellingMinimum": 950000, "sellingRateKg": 1208.0}, {"origin": "Zone 1", "destination": "Zone 4", "truckType": "FTL", "buyingMinimum": 1000000, "buyingRateKg": 10000.0, "sellingMinimum": 1050000, "sellingRateKg": 1209.0}, {"origin": "Zone 2", "destination": "Zone 1", "truckType": "FTL", "buyingMinimum": 1100000, "buyingRateKg": 11000.0, "sellingMinimum": 1100000, "sellingRateKg": 1210.0}, {"origin": "Zone 4", "destination": "Zone 1", "truckType": "FTL", "buyingMinimum": 1200000, "buyingRateKg": 12000.0, "sellingMinimum": 1150000, "sellingRateKg": 1211.0}];
+    const zones = [{"zone": "Zone", "area": "City/State"}, {"zone": "Zone 1", "area": "Seoul&Gyeonggi province"}, {"zone": "Zone 2", "area": "Outside Seoul&Gyeonggi province except Jej, Gyeongsang, Jeonnam"}, {"zone": "Zone 3", "area": "Jeju Island"}, {"zone": "Zone 4", "area": "Gyeongsang-do and Jeonnam"}];
+
+    const $ = (id) => document.getElementById(id);
+    const money = (value) => 'KRW ' + Math.round(value).toLocaleString('ko-KR');
+
+    function uniqueValues(key) {
+      return [...new Set(rates.map(row => row[key]))].sort((a, b) => a.localeCompare(b, undefined, { numeric:true }));
+    }
+
+    function fillSelect(id, values) {
+      $(id).innerHTML = values.map(v => `<option value="${v}">${v}</option>`).join('');
+    }
+
+    function renderZones() {
+      $('zoneTable').innerHTML = zones.map(z => `<tr><td><strong>${z.zone}</strong></td><td>${z.area}</td></tr>`).join('');
+    }
+
+    function updateDestinations() {
+      const origin = $('origin').value;
+      const truckType = $('truckType').value;
+      const available = [...new Set(rates.filter(r => r.origin === origin && r.truckType === truckType).map(r => r.destination))]
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric:true }));
+      fillSelect('destination', available);
+    }
+
+    function calculateRate() {
+      const origin = $('origin').value;
+      const destination = $('destination').value;
+      const truckType = $('truckType').value;
+      const priceType = $('priceType').value;
+      const weight = Number($('weight').value);
+      const error = $('error');
+      error.style.display = 'none';
+      $('result').style.display = 'none';
+
+      if (!weight || weight <= 0) {
+        error.textContent = '중량을 0보다 큰 숫자로 입력해 주세요.';
+        error.style.display = 'block';
+        return;
+      }
+
+      const row = rates.find(r => r.origin === origin && r.destination === destination && r.truckType === truckType);
+      if (!row) {
+        error.textContent = '해당 Origin/Destination/Truck Type 조합의 rate가 없습니다.';
+        error.style.display = 'block';
+        return;
+      }
+
+      const minimum = priceType === 'selling' ? row.sellingMinimum : row.buyingMinimum;
+      const rateKg = priceType === 'selling' ? row.sellingRateKg : row.buyingRateKg;
+      const weightCost = weight * rateKg;
+      const amount = Math.max(minimum, weightCost);
+
+      $('amount').textContent = money(amount);
+      $('minimumCost').textContent = money(minimum);
+      $('rateKg').textContent = money(rateKg) + ' / KG';
+      $('weightCost').textContent = money(weightCost);
+      $('basis').textContent = amount === minimum ? 'Minimum Cost 적용' : 'Weight × Rate/KG 적용';
+      $('result').style.display = 'block';
+    }
+
+    function resetForm() {
+      $('weight').value = '';
+      $('priceType').value = 'selling';
+      $('origin').selectedIndex = 0;
+      $('truckType').selectedIndex = 0;
+      updateDestinations();
+      $('result').style.display = 'none';
+      $('error').style.display = 'none';
+    }
+
+    fillSelect('origin', uniqueValues('origin'));
+    fillSelect('truckType', uniqueValues('truckType'));
+    $('origin').addEventListener('change', updateDestinations);
+    $('truckType').addEventListener('change', updateDestinations);
+    updateDestinations();
+    renderZones();
+  </script>
+</body>
+</html>
